@@ -18,7 +18,7 @@ def get_tolerance_tables(ds: pydicom.Dataset) -> pd.Series:
     """Extract the tolerance table name from the dataset.
 
     Args:
-        ds (pydicom.Dataset): The dicom dataset for a plan.
+        ds (pydicom.Dataset): The DICOM dataset for a plan.
     Returns:
         tolerance_ref (pd.Series): The tolerance table name for each field in
             the plan.
@@ -34,7 +34,7 @@ def get_plan_setup(ds: pydicom.Dataset) -> pd.DataFrame:
     """Extract the setup technique and patient orientation from the dataset.
 
     Args:
-        ds (pydicom.Dataset): The dicom dataset for a plan.
+        ds (pydicom.Dataset): The DICOM dataset for a plan.
     Returns:
         setup_ref (pd.DataFrame): The setup technique and patient orientation
             for a plan.
@@ -55,10 +55,10 @@ def get_mus(ds: pydicom.Dataset) -> pd.DataFrame:
     """Extract the MU settings from the dataset.
 
     Args:
-        ds (pydicom.Dataset): The dicom dataset for a plan.
+        ds (pydicom.Dataset): The DICOM dataset for a plan.
     Returns:
         plan_mus (pd.DataFrame): The MUs and field dose for each field in
-            the plan.  An emty Dataframe is returned if none of the fields
+            the plan.  An empty DataFrame is returned if none of the fields
             contain MUs.
     """
     MU_data = dict()
@@ -154,7 +154,7 @@ def get_block_info(field_ds: pydicom.Dataset) -> Dict[str, Any]:
     block_coord_data = getattr(block,
                                'BlockData',
                                None)
-    # Convert into (x,y) paris in units of cm
+    # Convert into (x,y) parts in units of cm
     block_coordinates = np.array(block_coord_data).reshape((-1, 2)) / 10
     # Add the first point on the end as the last point to close the loop
     block_coordinates = np.row_stack([block_coordinates, block_coordinates[0]])
@@ -209,7 +209,7 @@ def get_control_point_data(field_ds: pydicom.Dataset) -> Dict[str, Any]:
     """Extract field settings from DICOM data for a given field.
 
     This method assumes a static field and only extracts settings from the first
-        controle point in the Control Point Sequence.
+        control point in the Control Point Sequence.
     Args:
         field_ds (pydicom.Dataset): The DICOM BeamSequence sub-dataset for a
             field within a plan DICOM dataset.
@@ -248,7 +248,7 @@ def get_field_data(ds: pydicom.Dataset) -> pd.DataFrame:
     """Extract all field related parameters settings for each field.
 
     Args:
-        ds (pydicom.Dataset): The dicom dataset for a plan.
+        ds (pydicom.Dataset): The DICOM dataset for a plan.
     Returns:
         field_df (pd.DataFrame): Field parameters for all fields in the plan.
     """
@@ -320,7 +320,7 @@ def get_field_data(ds: pydicom.Dataset) -> pd.DataFrame:
 def combine_field_tables(field_df, plan_mus, setup_ref, tolerance_ref):
     """Marge all field related parameters settings.
 
-    SAD and Actual SSD are also re-scalled from mm to cm.
+    SAD and Actual SSD are also re-scaled from mm to cm.
     Args:
         field_df (pd.DataFrame): Field parameters for all fields in the plan.
         plan_mus (pd.DataFrame): The MUs and field dose for each field in
@@ -354,7 +354,7 @@ def get_merged_field_data(ds: pydicom.Dataset) -> pd.DataFrame:
     """Extract and merge field related info from the dataset.
 
     Args:
-        ds (pydicom.Dataset): The dicom dataset for a plan.
+        ds (pydicom.Dataset): The DICOM dataset for a plan.
     Returns:
         field_df (pd.DataFrame): Field parameters for all fields in the plan
             after merging MUs, Setup and Tolerance data.
@@ -370,11 +370,11 @@ def get_merged_field_data(ds: pydicom.Dataset) -> pd.DataFrame:
 
 #%% Block Coordinates Table
 def get_block_coord(plan_df: pd.DataFrame) -> pd.DataFrame:
-    """Extract the cutout coordinatesfor each field.
+    """Extract the cutout coordinates for each field.
 
     Extracts the np.array block coordinates for each field, returning them as
-        a seperate Dataframe.  The returned dataframe has a multi-level column
-        index.  The top level is the plan ID, teh second level is the field ID,
+        a separate DataFrame.  The returned dataFrame has a multi-level column
+        index.  The top level is the plan ID, the second level is the field ID,
         and the lowest level is X or Y, the coordinate data pairs for the
         cutout.
     Args:

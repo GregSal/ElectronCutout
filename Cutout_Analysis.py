@@ -27,13 +27,13 @@ cm_scale = in_scale / 2.54  # cm to Pixels conversion
 
 #%% This section contains functions that enter data into the spreadsheet.
 def select_field(block_coords: pd.DataFrame) -> Tuple[str]:
-    """Select field for Aperature from list of available fields.
+    """Select field for Aperture from list of available fields.
 
-    Currently selects first field.  The aperature coordinates in the Selected
+    Currently selects first field.  The aperture coordinates in the Selected
         field are used for the cutout dimensions.
     Args:
         block_coords (pd.DataFrame): Table with all fields containing
-            aperatures Column leves expected are: ['PlanId', 'FieldId', 'Axis'].
+            apertures Column levels expected are: ['PlanId', 'FieldId', 'Axis'].
     Returns:
         selected_field (Tuple[str]): The PlanId and FieldId of the selected
             field as a tuple.
@@ -49,8 +49,8 @@ def save_data(block_coords: pd.DataFrame, plan_df: pd.DataFrame,
     """Load the template spreadsheet and save a copy containing plan data.
 
     Args:
-        block_coords (pd.DataFrame): The x, y coordinates of the aperature.
-        plan_df (pd.DataFrame): Plan Parameters obtained from the Dicom File.
+        block_coords (pd.DataFrame): The x, y coordinates of the aperture.
+        plan_df (pd.DataFrame): Plan Parameters obtained from the DICOM File.
         save_file (Path): Path to use for saving the filled template.
         template_path (Path): Path to the Excel template.
     Returns:
@@ -73,7 +73,7 @@ def save_data(block_coords: pd.DataFrame, plan_df: pd.DataFrame,
         """Store the plan data in the spreadsheet.
 
         Args:
-            plan_df (pd.DataFrame): Plan Parameters obtained from Dicom File.
+            plan_df (pd.DataFrame): Plan Parameters obtained from DICOM File.
             workbook (xw.Book): Excel workbook containing the data.
         Returns:
             None.
@@ -86,7 +86,7 @@ def save_data(block_coords: pd.DataFrame, plan_df: pd.DataFrame,
         """Store the Field parameter data in the spreadsheet.
 
         Args:
-            plan_df (pd.DataFrame): Plan Parameters obtained from Dicom File.
+            plan_df (pd.DataFrame): Plan Parameters obtained from DICOM File.
             workbook (xw.Book): Excel workbook containing the data.
         Returns:
             None.
@@ -108,10 +108,10 @@ def save_data(block_coords: pd.DataFrame, plan_df: pd.DataFrame,
 
 def add_block_info(block_coords: pd.DataFrame, selected_field: Tuple[str],
                    workbook: xw.Book):
-    """Store aperature and SSD data in the spreadsheet.
+    """Store aperture and SSD data in the spreadsheet.
 
     Args:
-        block_coords (pd.DataFrame): Table with aperatures for all fields.
+        block_coords (pd.DataFrame): Table with apertures for all fields.
         selected_field (Tuple[str]): The PlanId and FieldId index of the
             selected field.
         workbook (xw.Book): Excel workbook containing the data.
@@ -121,17 +121,17 @@ def add_block_info(block_coords: pd.DataFrame, selected_field: Tuple[str],
 
     def add_block_coordinates(block_coords: pd.DataFrame,
                               selected_field: Tuple[str], workbook: xw.Book):
-        """Store aperature coordinates.
+        """Store aperture coordinates.
 
-        Add aperature coordinates for the selected field to the CutOut
+        Add aperture coordinates for the selected field to the CutOut
             Coordinates table for plotting.
         Args:
-            block_coords (pd.DataFrame): Table with aperatures for all fields.
+            block_coords (pd.DataFrame): Table with apertures for all fields.
             selected_field (Tuple[str]): The PlanId and FieldId index of the
                 selected field.
             workbook (xw.Book): Excel workbook containing the data.
         Returns:
-            coords (pd.DataFrame): The x,y coordinates for the aperature.
+            coords (pd.DataFrame): The x,y coordinates for the aperture.
         """
         coords = block_coords.loc[:, selected_field]
         coords_sheet = workbook.sheets['CutOut Coordinates']
@@ -144,7 +144,7 @@ def add_block_info(block_coords: pd.DataFrame, selected_field: Tuple[str],
         """Store SSD from selected_field in the spreadsheet.
 
         Args:
-            plan_df (pd.DataFrame): Plan Parameters obtained from Dicom File.
+            plan_df (pd.DataFrame): Plan Parameters obtained from DICOM File.
             selected_field (Tuple[str]): The PlanId and FieldId index of the
                 selected field.
             workbook (xw.Book): Excel workbook containing the data.
@@ -159,7 +159,7 @@ def add_block_info(block_coords: pd.DataFrame, selected_field: Tuple[str],
         """Store applicator size from selected_field in the spreadsheet.
 
         Args:
-            plan_df (pd.DataFrame): Plan Parameters obtained from Dicom File.
+            plan_df (pd.DataFrame): Plan Parameters obtained from DICOM File.
             selected_field (Tuple[str]): The PlanId and FieldId index of the
                 selected field.
             workbook (xw.Book): Excel workbook containing the data.
@@ -173,10 +173,10 @@ def add_block_info(block_coords: pd.DataFrame, selected_field: Tuple[str],
     def add_cutout_dimensions(coords: pd.DataFrame, workbook: xw.Book):
         """Calculate and store applicator shape parameters in the spreadsheet.
 
-        Calcualtes Equivalent Square for apperature and x, y extent of
-            apperature.
+        Calculates Equivalent Square for aperture and x, y extent of
+            aperture.
         Args:
-            coords (pd.DataFrame): The x,y coordinates for the aperature.
+            coords (pd.DataFrame): The x,y coordinates for the aperture.
             workbook (xw.Book): Excel workbook containing the data.
         Returns:
             None.
@@ -210,7 +210,7 @@ def scale_cutout_graph(insert_size: int, image_sheet: xw.Sheet) -> xw.Chart:
             Can be one of {6, 10, 15, 20, 25}
         image_sheet (xw.Sheet): The worksheet containing the plot of the cutout.
     Returns:
-        outline_graph (xw.Chart): The Excel plot of the apperature opening.
+        outline_graph (xw.Chart): The Excel plot of the aperture opening.
     """
     outline_graph = image_sheet.charts['Outline']
     # Set the graph size to match that of the applicator.
@@ -229,7 +229,7 @@ def get_image_size(cutout_image):
     """Get the height, width and resolution of the Scanned cutout image.
 
     Args:
-        cutout_image (imageio image): The image and metadata for the scanned
+        cutout_image (imageio image): The image and meta-data for the scanned
             cutout image.
     Returns:
         height (float): The height of the image in inches.
@@ -248,19 +248,19 @@ def find_outline(cutout_image, dpi):
 
     The external outline is the metal frame around the insert.
     Args:
-        cutout_image (imageio image): The image and metadata for the scanned
+        cutout_image (imageio image): The image and meta-data for the scanned
             cutout image.
         dpi (int): The resolution of the image in dots per inch.
     Returns:
         insert_outline (np.array): x,y coordinates approximating the outside
-            extent oif the cerobend.
+            extent of the Cerrobend.
         insert_limits (np.array of size 4): the maximum and minimum extent of
-            the cerobend in the x and Y directions. The order of the values is
+            the Cerrobend in the x and Y directions. The order of the values is
             as follows:
                     [x_min (image top), y_min (image left),
                      x_max (image bottom), y_max (image right)]
     """
-    # apply a median filter to reduce the noise, but keem the edge locations.
+    # apply a median filter to reduce the noise, but keep the edge locations.
     med_denoise = ndimage.median_filter(cutout_image, 10)
     # Generate contours at a threshold just above black (20)
     # The largest contour will be the page size
@@ -303,7 +303,7 @@ def crop_cutout_image(insert_limits: np.array, cutout_shape: xw.Picture,
 
     Args:
         insert_limits (np.array of size 4): the maximum and minimum extent of
-            the cerobend in the x and Y directions. The order of the values is
+            the Cerrobend in the x and Y directions. The order of the values is
             as follows:
                     [x_min (image top), y_min (image left),
                      x_max (image bottom), y_max (image right)]
@@ -313,7 +313,7 @@ def crop_cutout_image(insert_limits: np.array, cutout_shape: xw.Picture,
     Returns:
         None.
     """
-    # Set the margin arount the cutout
+    # Set the margin around the cutout
     margin = np.array([-1, -1, 1, 1]) * 0.5  # 1/2" margin
     # Calculate the crop sizes
     crop_size = insert_limits + margin
@@ -350,7 +350,7 @@ def set_arrows(insert_size: int, mid_point: np.array, image_sheet: xw.Sheet):
     #Make the arrows orthogonal
     up_arrow.width = 0
     horz_arrow.height = 0
-    #Center the arrows on the middle of the cutour image
+    #Center the arrows on the middle of the cutout image
     up_arrow.left = mid_point[1]
     horz_arrow.top = mid_point[0]
     up_arrow.top = mid_point[0] - cm_scale * insert_size / 2
@@ -365,13 +365,13 @@ def set_arrows(insert_size: int, mid_point: np.array, image_sheet: xw.Sheet):
 
 
 def rotate_image(insert_outline: np.array, insert_limits, cutout_shape):
-    """Rotate the cutout image so that the insert is squar on the page.
+    """Rotate the cutout image so that the insert is square on the page.
 
     Args:
         insert_outline (np.array): x,y coordinates approximating the outside
-            extent oif the cerobend.
+            extent of the Cerrobend.
         insert_limits (np.array of size 4): the maximum and minimum extent of
-            the cerobend in the x and Y directions. The order of the values is
+            the Cerrobend in the x and Y directions. The order of the values is
             as follows:
                     [x_min (image top), y_min (image left),
                      x_max (image bottom), y_max (image right)]
@@ -380,7 +380,7 @@ def rotate_image(insert_outline: np.array, insert_limits, cutout_shape):
         None.
     """
     def find_angle(x_selection: List[bool], y_selection: List[bool]) -> float:
-        """Detemine the angle from the slope of one of the insert edges.
+        """Determine the angle from the slope of one of the insert edges.
 
         Args:
             x_selection (List[bool]): A boolean index to the desired x range of
@@ -401,7 +401,7 @@ def rotate_image(insert_outline: np.array, insert_limits, cutout_shape):
         angle = math.degrees(math.atan(p_fit[0]))
         return angle
 
-    # Set a margin arount the insert contour to avoid corner effects
+    # Set a margin around the insert contour to avoid corner effects
     margin = np.array([-1, -1, 1, 1]) * 0.5  # 1/2" margin
     lim_x_low, lim_y_low, lim_x_hi, lim_y_hi = (insert_limits - margin)
     # Identify the different edges
@@ -445,34 +445,45 @@ def show_cutout_info(image_file: Path, insert_size: int, workbook: xw.Book):
     set_arrows(insert_size, mid_point, image_sheet)
     # TODO Move the arrows to the top of the shape layers
 
+def analyze_cutout(dicom_folder=Path.cwd(),
+                   template_path='CutOut Size Check.xlsx',
+                   save_data_file='CutOut Size Check Test.xlsx',
+                   image_file='Cutout scan.jpg'):
+    plan_files = [file for file in dicom_folder.glob('**/RP*.dcm')]
 
-#%% Directory Paths
-# data_path = Path(r'L:\temp\Plan Checking Temp')
-# dicom_starting_path = data_path / 'DICOM'
-# template_dir = Path(r'\\dkphysicspv1\e$\Gregs_Work\Plan Checking\Plan Check Tools\Templates')
-# template_dir = Path.cwd() / 'Electron Insert QA'
+    plan_df = get_plan_data(plan_files)
+    block_coords = get_block_coord(plan_df)
+    selected_field = select_field(block_coords)
+    insert_size = plan_df.at['ApplicatorOpening', selected_field]
+    workbook = save_data(block_coords, plan_df, save_data_file, template_path)
+    add_block_info(block_coords, selected_field, workbook)
+    show_cutout_info(image_file, insert_size, workbook)
 
-#%% Test directory is current directory
-data_path = Path.cwd()
-dicom_starting_path = Path.cwd()
-template_dir = Path.cwd()
+#%% Main
+def main():
+    # Directory Paths
+    # data_path = Path(r'L:\temp\Plan Checking Temp')
+    # dicom_folder = data_path / 'DICOM'
+    # template_dir = Path(r'\\dkphysicspv1\e$\Gregs_Work\Plan Checking\Plan Check Tools\Templates')
+    # template_dir = Path.cwd() / 'Electron Insert QA'
 
-#%% File Paths
-template_file_name = 'CutOut Size Check.xlsx'
-output_file_name = 'CutOut Size Check Test.xlsx'
-image_file_name = 'image2021-04-16-111118-1.jpg'
-template_file_path = template_dir / template_file_name
-save_data_file_name = data_path / output_file_name
-image_file = data_path / image_file_name
+    # Test directory is current directory
+    data_path = Path.cwd()
+    dicom_folder = Path.cwd()
+    template_dir = Path.cwd()
+    output_file_name = 'CutOut Size Check Test.xlsx'
+    # Default File Paths
+    template_file_name = 'CutOut Size Check.xlsx'
+    image_file_name = 'image2021-04-16-111118-1.jpg'
+    selected_file_paths = dict(
+        dicom_starting_path = dicom_folder,
+        image_file_starting_path = data_path / image_file_name,
+        template_file_path = template_dir / template_file_name,
+        save_data_file_name = data_path / output_file_name
+        )
 
-#%% Load DICOM Data
-plan_files = [file for file in DICOM_folder.glob('**/RP*.dcm')]
+    analyze_cutout(**selected_file_paths)
 
-plan_df = get_plan_data(plan_files)
-block_coords = get_block_coord(plan_df)
-selected_field = select_field(block_coords)
-insert_size = plan_df.at['ApplicatorOpening', selected_field]
-workbook = save_data(block_coords, plan_df, save_file, template_path)
-add_block_info(block_coords, selected_field, workbook)
 
-show_cutout_info(image_file, insert_size, workbook)
+if __name__ == '__main__':
+    main()
