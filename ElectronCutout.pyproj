@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{a73cab1f-2d35-4103-bb26-569a7e478277}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>cutout_check_gui.py</StartupFile>
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId>CondaEnv|CondaEnv|Standard</InterpreterId>
+    <IsWindowsApplication>True</IsWindowsApplication>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include=".gitattributes" />
+    <Content Include=".gitignore" />
+    <Content Include="13 cm circle scan.jpg" />
+    <Content Include="Cutout scan.jpg" />
+    <Content Include="CutOut Size Check.xlsx" />
+    <Content Include="cutout_low_res.jpg" />
+    <Content Include="image2021-04-15-070027-1.jpg" />
+    <Content Include="image2021-04-16-095423-1.jpg" />
+    <Content Include="image2021-04-16-111118-1.jpg" />
+    <Content Include="RP.ElectronCutout.NOSE.dcm" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Cutout_Analysis.py" />
+    <Compile Include="Cutout_Analysis2.py" />
+    <Compile Include="cutout_check_gui.py" />
+    <Compile Include="find_cutout.py" />
+    <Compile Include="load_dicom_e_plan.py" />
+    <Compile Include="scipy_tests.py" />
+    <Compile Include="shapley_tests.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="CondaEnv|CondaEnv|Standard" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>

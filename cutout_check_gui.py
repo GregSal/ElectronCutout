@@ -8,6 +8,8 @@ Created on Sun Apr 25 11:51:36 2021
 from pathlib import Path
 import PySimpleGUI as sg
 
+from Cutout_Analysis import analyze_cutout
+
 
 #%%  Select File
 def file_selection_frame(**file_paths):
@@ -21,31 +23,31 @@ def file_selection_frame(**file_paths):
         TYPE: DESCRIPTION.
     """
 
-    def make_file_selection_list(dicom_starting_path,
-                                 image_file_starting_path,
-                                 template_file_path,
-                                 save_data_file_name):
+    def make_file_selection_list(dicom_folder,
+                                 image_file,
+                                 template_path,
+                                 save_data_file):
         file_selection_list = [
             dict(frame_title='Select DICOM directory to scan',
                  file_k='dicom_folder',
                  selection='dir',
-                 starting_path=dicom_starting_path
+                 starting_path=dicom_folder
                  ),
             dict(frame_title='Select Cutout Image File to Load',
                  file_k='image_file',
                  selection='read file',
-                 starting_path=image_file_starting_path,
+                 starting_path=image_file,
                  file_type=(('Image Files', '*.jpg'),)
                  ),
             dict(frame_title='CutOut Check Template File',
-                 file_k='template_file',
-                 starting_path=template_file_path,
+                 file_k='template_path',
+                 starting_path=template_path,
                  selection='read file',
                  file_type=(('Excel Files', '*.xlsx'),)
                  ),
             dict(frame_title='Save CutOut Check As:',
                  file_k='save_data_file',
-                 starting_path=save_data_file_name,
+                 starting_path=save_data_file,
                  selection='save file',
                  file_type=(('Excel Files', '*.xlsx'),)
                  )
@@ -77,8 +79,11 @@ def file_selection_frame(**file_paths):
             browse = sg.FolderBrowse(initial_folder=initial_dir)
         else:
             raise ValueError(f'{selection} is not a valid browser type')
-        file_selector_frame = sg.Frame(title=frame_title, layout=[
-            [sg.InputText(key=file_k, default_text=initial_file), browse]])
+        frame_k = file_k + '_frame'
+        file_selector_frame = sg.Frame(
+            title=frame_title, key=frame_k, layout=[
+            [sg.InputText(key=file_k, default_text=initial_file), browse]]
+            )
         return file_selector_frame
 
     file_selection_list = make_file_selection_list(**file_paths)
@@ -87,13 +92,26 @@ def file_selection_frame(**file_paths):
     return file_frame_list
 
 
-def get_file_paths(window):
-    button, parameters = window.read()
+def get_file_paths(window, default_file_paths):
+    while True:
+        event, parameters = window.read(timeout=200)
+        if event == sg.TIMEOUT_KEY:
+            continue
+        if 'Submit' in event:
+            break
+        if 'Cancel' in event:
+            sg.popup_error('Operation canceled')
+            parameters = None
+            break
     window.close()
-    if 'Cancel' in button:
-        sg.popup_error('Operation canceled')
-        return None
-    return parameters
+    path_list = list(default_file_paths.keys())
+    if parameters:
+        file_paths = {path_name: Path(selected_path)
+                      for path_name, selected_path in parameters.items()
+                      if path_name in path_list}
+    else:
+        file_paths = None
+    return file_paths
 
 
 def make_window(**file_paths):
@@ -104,6 +122,10 @@ def make_window(**file_paths):
         [sg.Column(file_frame_list, key='File Selection')],
         [sg.Column(actions_list, key='Actions')]
         ])
+    for elm in window.element_list():
+        elm.expand(expand_x=True)
+        # TODO Add display Patient info
+        # TODO add field selector to GUI
     return window
 
 
@@ -123,17 +145,17 @@ def main():
 
     # Default File Paths
     template_file_name = 'CutOut Size Check.xlsx'
-    image_file_name = 'image2021-04-16-111118-1.jpg'
+    image_file_name = 'image2021-04-16-095423-1.jpg'
     default_file_paths = dict(
-        dicom_starting_path = dicom_folder,
-        image_file_starting_path = data_path / image_file_name,
-        template_file_path = template_dir / template_file_name,
-        save_data_file_name = data_path / output_file_name
+        dicom_folder = dicom_folder,
+        image_file = data_path / image_file_name,
+        template_path = template_dir / template_file_name,
+        save_data_file = data_path / output_file_name
         )
-    window =  make_window(**default_file_paths)
-    selected_file_paths = get_file_paths(window)
-    # analyze_cutout(**selected_file_paths)
-    print(selected_file_paths)
+    window = make_window(**default_file_paths)
+    selected_file_paths = get_file_paths(window, default_file_paths)
+    if selected_file_paths:
+        analyze_cutout(**selected_file_paths)
 
 
 if __name__ == '__main__':

@@ -106,8 +106,8 @@ def save_data(block_coords: pd.DataFrame, plan_df: pd.DataFrame,
     return workbook
 
 
-def add_block_info(block_coords: pd.DataFrame, selected_field: Tuple[str],
-                   workbook: xw.Book):
+def add_block_info(plan_df, block_coords: pd.DataFrame,
+                   selected_field: Tuple[str], workbook: xw.Book):
     """Store aperture and SSD data in the spreadsheet.
 
     Args:
@@ -363,6 +363,21 @@ def set_arrows(insert_size: int, mid_point: np.array, image_sheet: xw.Sheet):
     # Group the arrows
     image_sheet.shapes.api.Range(['UpArrow', 'HorzArrow']).Group()
 
+def align_graph(insert_size: int, mid_point: np.array, outline_graph: xw.Chart):
+    """Center Graph over top cutout image.
+
+    Args:
+        insert_size (int): The size of the applicator used.
+            Can be one of {6, 10, 15, 20, 25}
+        mid_point (np.array of size 2): The center point of the cropped cutout
+            image. Has the form [height, width]
+        outline_graph (xw.Chart): The cutout shape graph.
+    Returns:
+        None.
+    """
+    outline_graph.top = mid_point[0] - cm_scale * insert_size / 2
+    outline_graph.left = mid_point[1] - cm_scale * insert_size / 2
+
 
 def rotate_image(insert_outline: np.array, insert_limits, cutout_shape):
     """Rotate the cutout image so that the insert is square on the page.
@@ -433,7 +448,6 @@ def show_cutout_info(image_file: Path, insert_size: int, workbook: xw.Book):
     # Set the location for the cutout image.
     pic_location = [0, 0]  # Top, Left in pixels
     outline_graph = scale_cutout_graph(insert_size, image_sheet)
-    # TODO center the graph over the cutout image
     cutout_image = imageio.imread(image_file)
     height, width, dpi = get_image_size(cutout_image)
     insert_outline, insert_limits = find_outline(cutout_image, dpi)
@@ -443,6 +457,8 @@ def show_cutout_info(image_file: Path, insert_size: int, workbook: xw.Book):
     mid_point = np.array([cutout_shape.height,
                           cutout_shape.width]) / 2 + pic_location
     set_arrows(insert_size, mid_point, image_sheet)
+    align_graph(insert_size, mid_point, outline_graph)
+    # TODO center the graph over the cutout image
     # TODO Move the arrows to the top of the shape layers
 
 def analyze_cutout(dicom_folder=Path.cwd(),
@@ -456,7 +472,7 @@ def analyze_cutout(dicom_folder=Path.cwd(),
     selected_field = select_field(block_coords)
     insert_size = plan_df.at['ApplicatorOpening', selected_field]
     workbook = save_data(block_coords, plan_df, save_data_file, template_path)
-    add_block_info(block_coords, selected_field, workbook)
+    add_block_info(plan_df, block_coords, selected_field, workbook)
     show_cutout_info(image_file, insert_size, workbook)
 
 #%% Main
