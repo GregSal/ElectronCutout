@@ -63,24 +63,16 @@ def get_mus(ds: pydicom.Dataset) -> pd.DataFrame:
     """
     MU_data = dict()
     dose_data = dict()
-    field_mu_seq = getattr(ds,
-                           'FractionGroupSequence',
-                           None)
+    field_mu_seq = ds.get('FractionGroupSequence')
     if field_mu_seq:
         beams = field_mu_seq[0]
-        beam_seq = getattr(beams,
-                           'ReferencedBeamSequence',
-                           None)
+        beam_seq = beams.get('ReferencedBeamSequence')
         if beam_seq:
             for field in beam_seq:
-                field_MU = getattr(field,
-                                   'BeamMeterset',
-                                   None)
+                field_MU = field.get('BeamMeterset')
                 if field_MU:
                     MU_data[field.ReferencedBeamNumber] = field_MU
-                field_Dose = getattr(field,
-                                     'BeamDose',
-                                     None)
+                field_Dose = field.get('BeamDose')
                 if field_Dose:
                     dose_data[field.ReferencedBeamNumber] = field_Dose
     if MU_data:
@@ -105,39 +97,21 @@ def get_block_info(field_ds: pydicom.Dataset) -> Dict[str, Any]:
         block_data (Dict[str, Any]): A dictionary containing insert and cutout
             attributes for the field.
     """
-    block_seq = getattr(field_ds, 'BlockSequence', None)
+    block_seq = field_ds.get('BlockSequence')
     if not block_seq:
         return {}
     block = block_seq[0]
     block_data = {
-        'BlockName': getattr(block,
-                             'BlockName',
-                             None),
-        'BlockTrayID': getattr(block,
-                               'BlockTrayID',
-                               None),
-        'MaterialID': getattr(block,
-                              'MaterialID',
-                              None),
-        'BlockType': getattr(block,
-                             'BlockType',
-                             None),
-        'InsertCode': getattr(block,
-                              'AccessoryCode',
-                              None),
-        'BlockDivergence': getattr(block,
-                                   'BlockDivergence',
-                                   None)
+        'BlockName': block.get('BlockName'),
+        'BlockTrayID': block.get('BlockTrayID'),
+        'MaterialID': block.get('MaterialID'),
+        'BlockType': block.get('BlockType'),
+        'InsertCode': block.get('AccessoryCode'),
+        'BlockDivergence': block.get('BlockDivergence')
     }
-    position = getattr(block,
-                       'BlockMountingPosition',
-                       None)
-    distance = getattr(block,
-                       'SourceToBlockTrayDistance',
-                       None)
-    thickness = getattr(block,
-                        'BlockThickness',
-                        None)
+    position = block.get('BlockMountingPosition')
+    distance = block.get('SourceToBlockTrayDistance')
+    thickness = block.get('BlockThickness')
     if distance:
         block_data['SourceToBlockTrayDistance'] = distance / 10
         if position:
@@ -151,9 +125,7 @@ def get_block_info(field_ds: pydicom.Dataset) -> Dict[str, Any]:
                     block_data['SourceToBlockDistance'] = (
                         (distance + thickness) / 10)
     # Extract the coordinates for the cutout as an np.array
-    block_coord_data = getattr(block,
-                               'BlockData',
-                               None)
+    block_coord_data = block.get('BlockData')
     # Convert into (x,y) parts in units of cm
     block_coordinates = np.array(block_coord_data).reshape((-1, 2)) / 10
     # Add the first point on the end as the last point to close the loop
@@ -173,35 +145,35 @@ def get_applicator_info(field_ds: pydicom.Dataset) -> Dict[str, Any]:
         appl_data (Dict[str, Any]): A dictionary containing applicator
             attributes for the field.
     """
-    appl_seq = getattr(field_ds,
-                       'ApplicatorSequence',
-                       None)
-    if not appl_seq:
-        return {}
-    appl = appl_seq[0]
-    appl_geom = appl.ApplicatorGeometrySequence[0]
-    appl_data = {
-        'AccessoryCode': getattr(appl,
-                                 'AccessoryCode',
-                                 None),
-        'ApplicatorID': getattr(appl,
-                                'ApplicatorID',
-                                None),
-        'ApplicatorType': getattr(appl,
-                                  'ApplicatorType',
-                                  None),
-        'ApplicatorApertureShape': getattr(appl_geom,
-                                           'ApplicatorApertureShape',
-                                           None),
-        'ApplicatorOpening': getattr(appl_geom,
-                                     'ApplicatorOpening',
-                                     None)
-    }
-    size = getattr(appl_geom,
-                   'ApplicatorOpening',
-                   None)
-    if size:
-        appl_data['ApplicatorOpening'] = size / 10
+    def get_size(appl, appl_data):
+        appl_geom_seq = appl.get('ApplicatorGeometrySequence')
+        if appl_geom_seq:
+            appl_geom = appl_geom_seq[0]
+            shape = appl_geom.get('ApplicatorApertureShape')
+            appl_data['ApplicatorApertureShape'] = shape
+            size = appl_geom.get('ApplicatorOpening')
+            if size:
+                appl_data['ApplicatorOpening'] = size / 10
+        else:
+            appl_id = appl.get('ApplicatorID')
+            size_match = re.match('A([0-9]+)',appl_id)
+            if size_match:
+                appl_data['ApplicatorOpening'] = int(size_match.group(1))
+            else:
+                appl_data = None
+        return appl_data
+
+    appl_seq = field_ds.get('ApplicatorSequence')
+    if appl_seq:
+        appl = appl_seq[0]
+        appl_data = {
+            'AccessoryCode': appl.get('AccessoryCode'),
+            'ApplicatorID': appl.get('ApplicatorID'),
+            'ApplicatorType': appl.get('ApplicatorType',),
+        }
+        appl_data = get_size(appl, appl_data)
+    else:
+        appl_data = None
     return appl_data
 
 
@@ -219,26 +191,13 @@ def get_control_point_data(field_ds: pydicom.Dataset) -> Dict[str, Any]:
     control_point_seq = field_ds.ControlPointSequence
     control_point = control_point_seq[0]
     initial_field_data = {
-        'CollimatorAngle': getattr(control_point,
-                                   'BeamLimitingDeviceAngle',
-                                   None),
-        'DoseRate': getattr(control_point,
-                            'DoseRateSet',
-                            None),
-        'GantryAngle': getattr(control_point,
-                               'GantryAngle', None),
-        'Energy': getattr(control_point,
-                          'NominalBeamEnergy',
-                          None),
-        'CouchAngle': getattr(control_point,
-                              'PatientSupportAngle',
-                              None),
-        'Actual SSD': getattr(control_point,
-                              'SourceToSurfaceDistance',
-                              None),
-        'Isocentre': getattr(control_point,
-                             'IsocenterPosition',
-                             None)
+        'CollimatorAngle': control_point.get('BeamLimitingDeviceAngle'),
+        'DoseRate': control_point.get('DoseRateSet'),
+        'GantryAngle': control_point.get('GantryAngle'),
+        'Energy': control_point.get('NominalBeamEnergy'),
+        'CouchAngle': control_point.get('PatientSupportAngle'),
+        'Actual SSD': control_point.get('SourceToSurfaceDistance'),
+        'Isocentre': control_point.get('IsocenterPosition')
     }
     return initial_field_data
 
@@ -257,60 +216,33 @@ def get_field_data(ds: pydicom.Dataset) -> pd.DataFrame:
         # Get general field parameters and references for linking with
         # tolerance tables, setup, and MUs.
         field_data = {
-            'BeamNumber': getattr(field_ds,
-                                  'BeamNumber',
-                                  None),
-            'ToleranceTableNumber': getattr(field_ds,
-                                            'ReferencedToleranceTableNumber',
-                                            None),
-            'PatientSetupNumber': getattr(field_ds,
-                                          'ReferencedPatientSetupNumber',
-                                          None),
-            'FieldId': getattr(field_ds,
-                               'BeamName',
-                               None),
-            'FieldType': getattr(field_ds,
-                                 'BeamType',
-                                 None),
-            'RadiationType': getattr(field_ds,
-                                     'RadiationType',
-                                     None),
-            'Weight': getattr(field_ds,
-                              'FinalCumulativeMetersetWeight',
-                              None),
-            'Linac': getattr(field_ds,
-                             'TreatmentMachineName',
-                             None),
-            'SetupField': getattr(field_ds,
-                                  'TreatmentDeliveryType',
-                                  None),
-            'SAD': getattr(field_ds,
-                           'SourceAxisDistance',
-                           None),
-            'NumberOfBlocks': getattr(field_ds,
-                                      'NumberOfBlocks',
-                                      None),
-            'NumberOfBoli': getattr(field_ds,
-                                    'NumberOfBoli',
-                                    None),
-            'NumberOfControlPoints': getattr(field_ds,
-                                             'NumberOfControlPoints',
-                                             None),
-            'NumberOfWedges': getattr(field_ds,
-                                      'NumberOfWedges',
-                                      None)
+            'BeamNumber': field_ds.get('BeamNumber'),
+            'ToleranceTableNumber': field_ds.get('ReferencedToleranceTableNumber'),
+            'PatientSetupNumber': field_ds.get('ReferencedPatientSetupNumber'),
+            'FieldId': field_ds.get('BeamName'),
+            'FieldType': field_ds.get('BeamType'),
+            'RadiationType': field_ds.get('RadiationType'),
+            'Weight': field_ds.get('FinalCumulativeMetersetWeight'),
+            'Linac': field_ds.get('TreatmentMachineName'),
+            'SetupField': field_ds.get('TreatmentDeliveryType'),
+            'SAD': field_ds.get('SourceAxisDistance'),
+            'NumberOfBlocks': field_ds.get('NumberOfBlocks'),
+            'NumberOfBoli': field_ds.get('NumberOfBoli'),
+            'NumberOfControlPoints': field_ds.get('NumberOfControlPoints'),
+            'NumberOfWedges': field_ds.get('NumberOfWedges')
         }
         # Step through the field sub-datasets to extract relevant information
         initial_field_data = get_control_point_data(field_ds)
         field_data.update(initial_field_data)
         # Get applicator data. Assumes only one applicator per field.
         appl_data = get_applicator_info(field_ds)
-        field_data.update(appl_data)
-        # Get insert data. Assumes only one insert per field.
-        block_data = get_block_info(field_ds)
-        field_data.update(block_data)
-        # Add the field dictionary to the list of fields
-        fields.append(field_data)
+        if appl_data:
+            field_data.update(appl_data)
+            # Get insert data. Assumes only one insert per field.
+            block_data = get_block_info(field_ds)
+            field_data.update(block_data)
+            # Add the field dictionary to the list of fields
+            fields.append(field_data)
     #convert list of dictionaries to a data frame
     field_df = pd.DataFrame(fields)
     return field_df
@@ -384,7 +316,7 @@ def get_block_coord(plan_df: pd.DataFrame) -> pd.DataFrame:
         in each plan.
     """
     block_coord_df = plan_df.loc['Coordinates', :]
-    field_groups = block_coord_df.groupby(['PlanId', 'FieldId'])
+    field_groups = block_coord_df.groupby(['PatientReference', 'PlanId', 'FieldId'])
     blk_grps = list()
     for name, group in field_groups:
         blk_grps.append(group.apply(
@@ -404,34 +336,39 @@ def read_dicom_plan(plan_file: Path) -> pd.DataFrame:
     Returns:
         field_df (pd.DataFrame): Field parameters for all fields in the plan.
     """
-    # TODO Verify that the DICOM file is a Plan file.
-    # SOPInstanceUID
     ds = pydicom.dcmread(plan_file)
+    dicom_type = ds.Modality
+    if 'RTPLAN' not in dicom_type:
+        return None
     plan_name = ds.RTPlanLabel
     patient_id = ds.PatientID
+    patient_name = str(ds.PatientName)
+    patient_birth_date = ds.PatientBirthDate
     field_df = get_merged_field_data(ds)
     field_df['PlanId'] = plan_name
-    field_df['PatientID'] = patient_id
+    field_df['PatientId'] = patient_id
+    field_df['PatientName'] = patient_name
+    field_df['PatientBirthDate'] = patient_birth_date
+    field_df['PatientReference'] = (field_df.PatientName + " (" +
+                                    field_df.PatientId + ")")
     return field_df
 
 
 # Read all files
-def get_plan_data(plan_files: List[Path]) -> pd.DataFrame:
-    """Load all DICOM plan files and extract field data from them.
+def get_plan_data(dicom_folder: Path) -> pd.DataFrame:
+    """Load field data from all DICOM plan files in a directory.
 
     Args:
-        plan_files (List[Path]): Full paths to all DICOM Plan files in a folder.
+        dicom_folder (Path): Full path to a folder containing DICOM Plan files.
     Returns:
         plan_df (pd.DataFrame): Field parameters for all fields in all plans.
     """
-    # TODO Create warning message if multiple patients in different plan files.
+    plan_files = [file for file in dicom_folder.glob('**/RP*.dcm')]
     plan_data = list()
     for plan_file in plan_files:
         field_df = read_dicom_plan(plan_file)
         plan_data.append(field_df)
     plan_df = pd.concat(plan_data)
-    plan_df.set_index(['PlanId', 'FieldId'], inplace=True)
-    plan_df = plan_df.T
     return plan_df
 
 
@@ -444,12 +381,11 @@ def main():
     """
     # File Paths
     # TODO turn this into Unit Tests
-    folder = Path.cwd()
+    dicom_folder = Path.cwd()
     output_file_name = 'Electron Plan DICOM Info.xlsx'
     save_file = folder / output_file_name
     # Load DICOM Data
-    plan_files = [file for file in folder.glob('**/RP*.dcm')]
-    plan_df = get_plan_data(plan_files)
+    plan_df = get_plan_data(dicom_folder)
     block_coords = get_block_coord(plan_df)
     plan_df.drop(index=['Coordinates'], inplace=True)
     # Save Data

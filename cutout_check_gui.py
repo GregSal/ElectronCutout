@@ -6,13 +6,15 @@ Created on Sun Apr 25 11:51:36 2021
 """
 #%% Imports etc.
 from pathlib import Path
+from functools import partial
 import PySimpleGUI as sg
-
+from load_dicom_e_plan import get_plan_data
+from load_dicom_e_plan import get_block_coord
 from Cutout_Analysis import analyze_cutout
 
 
 #%%  Select File
-def file_selection_frame(**file_paths):
+def file_selection_frame(**default_file_paths):
     """Generate a
 
     Args:
@@ -56,10 +58,11 @@ def file_selection_frame(**file_paths):
 
     def file_selector(selection, file_k, frame_title,
                       starting_path=Path.cwd(), file_type=None):
-        if isinstance(starting_path, str):
-            initial_dir = Path.cwd()
-            initial_dir = starting_path
-        elif starting_path.is_dir():
+        try:
+            starting_path = Path(starting_path)
+        except TypeError:
+            starting_path=Path.cwd()
+        if starting_path.is_dir():
             initial_dir = str(starting_path)
             initial_file = ''
         else:
@@ -77,6 +80,7 @@ def file_selection_frame(**file_paths):
                                     file_types=file_type)
         elif 'dir' in selection:
             browse = sg.FolderBrowse(initial_folder=initial_dir)
+            initial_file = initial_dir
         else:
             raise ValueError(f'{selection} is not a valid browser type')
         frame_k = file_k + '_frame'
@@ -86,10 +90,101 @@ def file_selection_frame(**file_paths):
             )
         return file_selector_frame
 
-    file_selection_list = make_file_selection_list(**file_paths)
+    path_list = list(default_file_paths.keys())
+    file_selection_list = make_file_selection_list(**default_file_paths)
+    # Dummy Invisible Widget containing the file selector keys as default_values
+    #Listbox(path_list,
+    #    default_values = path_list,
+    #    select_mode = sg.LISTBOX_SELECT_MODE_MULTIPLE,
+    #    enable_events = False,
+    #    bind_return_key = False,
+    #    size = (None, None),
+    #    disabled = False,
+    #    auto_size_text = None,
+    #    font = None,
+    #    no_scrollbar = False,
+    #    background_color = None,
+    #    text_color = None,
+    #    highlight_background_color = None,
+    #    highlight_text_color = None,
+    #    key = None,
+    #    pad = None,
+    #    tooltip = None,
+    #    right_click_menu = None,
+    #    visible = False,
+    #    metadata = None)
     file_frame_list = [[file_selector(**selection)]
                        for selection in file_selection_list]
     return file_frame_list
+
+
+def set_action_buttons():
+    action_buttons = {
+        'Back': dict(
+            button_text = 'Back',
+            disabled = True,
+            enable_events = True,
+            key = 'Back'
+            ),
+        'Next': dict(
+            button_text = 'Next',
+            disabled = False,
+            enable_events = True,
+            key = 'Next'
+            ),
+        'Cancel': dict(
+            button_text = 'Cancel',
+            disabled = False,
+            enable_events = True,
+            key = 'Cancel'
+            )
+        }
+    actions_list = [[sg.Button(**btn)]
+                    for btn in action_buttons.values()]
+    return actions_list
+
+
+def next_action(window, btn_updates, btn_actions):
+    for btn, updates in btn_updates.items():
+        window[btn].update(**updates)
+    done = False
+    while not(done):
+        event, parameters = window.read(timeout=200)
+        if event == sg.TIMEOUT_KEY:
+            continue
+        if event in action_dict:
+            action_method = action_dict[event]
+            action_results = action_method(parameters)
+            done = True
+    window.close()
+    return action_results
+
+
+def set_file_paths(default_file_paths, parameters):
+    path_list = list(default_file_paths.keys())
+    file_paths = dict()
+    if parameters:
+        for path_name, default_path in default_file_paths.items():
+            selected_path = parameters.get(path_name, default_path)
+            file_paths[path_name] = selected_path
+    return file_paths
+
+
+def cancel_action(parameters):
+    sg.popup_error('Cutout Analysis Canceled')
+    return None
+
+
+def select_file_paths(window, default_file_paths):
+    btn_updates = {
+        'Back': dict(disabled = True),
+        'Next': dict(disabled = False,
+                     button_text = 'Next')
+        }
+    btn_actions = {'Next': set_file_paths,
+                   'Cancel': cancel_action}
+    file_paths = next_action(window, btn_updates, btn_actions)
+    return file_paths
 
 
 def get_file_paths(window, default_file_paths):
@@ -154,8 +249,33 @@ def main():
         )
     window = make_window(**default_file_paths)
     selected_file_paths = get_file_paths(window, default_file_paths)
-    if selected_file_paths:
-        analyze_cutout(**selected_file_paths)
+
+    #if selected_file_paths:
+
+    dicom_folder = selected_file_paths['dicom_folder']
+    plan_df = get_plan_data(dicom_folder)
+    block_coords = get_block_coord(plan_df)
+
+    patients = set(plan_df['PatientReference'])
+    plans = set(field_df['PlanId'])
+    fields = set(field_df['FieldId'])
+    plan_df.set_index(['PatientReference', 'PlanId', 'FieldId'], inplace=True)
+    plan_df = plan_df.T
+
+    block_coords = get_block_coord(plan_df)
+    #### SElect plan and field
+    selected_field = select_field(block_coords)
+    ###
+
+    insert_size = plan_df.at['ApplicatorOpening', selected_field]
+
+    ## In Cutout Analysis
+        #    analyze_cutout(**selected_file_paths)
+    workbook = save_data(block_coords, plan_df, save_data_file, template_path)
+    add_block_info(plan_df, block_coords, selected_field, workbook)
+    show_cutout_info(image_file, insert_size, workbook)
+
+
 
 
 if __name__ == '__main__':
