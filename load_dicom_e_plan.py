@@ -323,7 +323,8 @@ def get_block_coord(plan_df: pd.DataFrame) -> pd.DataFrame:
             {'X': lambda x: x[:, 0], 'Y': lambda x: x[:, 1]}))
     blk_grps_df = pd.concat(blk_grps)
     block_coords = blk_grps_df.apply(pd.Series).T
-    block_coords = block_coords.reorder_levels([1, 2, 0], axis='columns')
+    block_coords = block_coords.reorder_levels([1, 2, 3, 0], axis='columns')
+    block_coords.columns.names = ['PatientReference', 'PlanId', 'FieldId', 'Axis']
     return block_coords
 
 
@@ -369,6 +370,8 @@ def get_plan_data(dicom_folder: Path) -> pd.DataFrame:
         field_df = read_dicom_plan(plan_file)
         plan_data.append(field_df)
     plan_df = pd.concat(plan_data)
+    plan_df.set_index(['PatientReference', 'PlanId', 'FieldId'], inplace=True)
+    plan_df = plan_df.T
     return plan_df
 
 

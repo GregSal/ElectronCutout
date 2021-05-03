@@ -22,13 +22,6 @@
   <ItemGroup>
     <Content Include=".gitattributes" />
     <Content Include=".gitignore" />
-    <Content Include="13 cm circle scan.jpg" />
-    <Content Include="Cutout scan.jpg" />
-    <Content Include="CutOut Size Check.xlsx" />
-    <Content Include="cutout_low_res.jpg" />
-    <Content Include="image2021-04-15-070027-1.jpg" />
-    <Content Include="image2021-04-16-095423-1.jpg" />
-    <Content Include="image2021-04-16-111118-1.jpg" />
     <Content Include="Output\CutOut Size Check 2.xlsx" />
     <Content Include="Output\CutOut Size Check Test 1.xlsx" />
     <Content Include="Output\CutOut Size Check Test.xlsx" />
@@ -39,7 +32,6 @@
     <Content Include="Reference Data\ElectronCutout Process Flow.pptx" />
     <Content Include="Reference Data\PDD Analysis.xlsx" />
     <Content Include="Reference Data\RDF Data.xlsx" />
-    <Content Include="RP.ElectronCutout.NOSE.dcm" />
     <Content Include="Template Files\CutOut Size Check.xlsx" />
     <Content Include="Test Files\13 cm circle scan.jpg" />
     <Content Include="Test Files\Cutout scan.jpg" />
@@ -59,12 +51,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cutout_Analysis.py" />
-    <Compile Include="Cutout_Analysis2.py" />
     <Compile Include="cutout_check_gui.py" />
-    <Compile Include="find_cutout.py" />
     <Compile Include="load_dicom_e_plan.py" />
-    <Compile Include="scipy_tests.py" />
-    <Compile Include="shapley_tests.py" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="CondaEnv|CondaEnv|Standard" />

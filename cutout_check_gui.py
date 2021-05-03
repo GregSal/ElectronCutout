@@ -7,7 +7,10 @@ Created on Sun Apr 25 11:51:36 2021
 #%% Imports etc.
 from pathlib import Path
 from functools import partial
+from typing import Tuple, List
+
 import PySimpleGUI as sg
+import pandas as pd
 from load_dicom_e_plan import get_plan_data
 from load_dicom_e_plan import get_block_coord
 from Cutout_Analysis import analyze_cutout
@@ -223,6 +226,26 @@ def make_window(**file_paths):
         # TODO add field selector to GUI
     return window
 
+def select_field(block_coords: pd.DataFrame) -> Tuple[str]:
+    """Select field for Aperture from list of available fields.
+
+    Currently selects first field.  The aperture coordinates in the Selected
+        field are used for the cutout dimensions.
+    Args:
+        block_coords (pd.DataFrame): Table with all fields containing
+            apertures Column levels expected are: ['PlanId', 'FieldId', 'Axis'].
+    Returns:
+        selected_field (Tuple[str]): The PlanId and FieldId of the selected
+            field as a tuple.
+    """
+    field_list = block_coords.columns.to_frame(index=True)
+    patients = list(set(field_list['PatientReference']))
+    selected_patient = patients[0]
+    plans = list(set(field_list.loc[selected_patient,'PlanId']))
+    selected_plan = plans[0]
+    fields = list(set(field_list.loc[(selected_patient, selected_plan), 'FieldId']))
+    selected_field = fields[0]
+    return (selected_patient, selected_plan, selected_field)
 
 #%% Main
 def main():
@@ -233,19 +256,20 @@ def main():
     # template_dir = Path.cwd() / 'Electron Insert QA'
 
     # Test directory is current directory
-    data_path = Path.cwd()
-    dicom_folder = Path.cwd()
-    template_dir = Path.cwd()
+    data_path = Path.cwd() / 'Test Files'
+    dicom_folder = Path.cwd() / 'Test Files'
+    template_dir = Path.cwd() / 'Template Files'
+    output_path = Path.cwd() / 'Output'
     output_file_name = 'CutOut Size Check Test.xlsx'
 
     # Default File Paths
     template_file_name = 'CutOut Size Check.xlsx'
-    image_file_name = 'image2021-04-16-095423-1.jpg'
+    image_file_name = 'CutoutTest3.jpg'
     default_file_paths = dict(
         dicom_folder = dicom_folder,
         image_file = data_path / image_file_name,
         template_path = template_dir / template_file_name,
-        save_data_file = data_path / output_file_name
+        save_data_file = output_path / output_file_name
         )
     window = make_window(**default_file_paths)
     selected_file_paths = get_file_paths(window, default_file_paths)
@@ -256,13 +280,8 @@ def main():
     plan_df = get_plan_data(dicom_folder)
     block_coords = get_block_coord(plan_df)
 
-    patients = set(plan_df['PatientReference'])
-    plans = set(field_df['PlanId'])
-    fields = set(field_df['FieldId'])
-    plan_df.set_index(['PatientReference', 'PlanId', 'FieldId'], inplace=True)
-    plan_df = plan_df.T
 
-    block_coords = get_block_coord(plan_df)
+
     #### SElect plan and field
     selected_field = select_field(block_coords)
     ###
