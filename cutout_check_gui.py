@@ -142,8 +142,8 @@ def set_action_buttons():
             key = 'Cancel'
             )
         }
-    actions_list = [[sg.Button(**btn)]
-                    for btn in action_buttons.values()]
+    actions_list = [[sg.Button(**btn)
+                    for btn in action_buttons.values()]]
     return actions_list
 
 
@@ -155,11 +155,11 @@ def next_action(window, btn_updates, btn_actions):
         event, parameters = window.read(timeout=200)
         if event == sg.TIMEOUT_KEY:
             continue
-        if event in action_dict:
-            action_method = action_dict[event]
+        if event in btn_actions:
+            action_method = btn_actions[event]
             action_results = action_method(parameters)
             done = True
-    window.close()
+    #window.close()
     return action_results
 
 
@@ -169,7 +169,7 @@ def set_file_paths(default_file_paths, parameters):
     if parameters:
         for path_name, default_path in default_file_paths.items():
             selected_path = parameters.get(path_name, default_path)
-            file_paths[path_name] = selected_path
+            file_paths[path_name] = Path(selected_path)
     return file_paths
 
 
@@ -179,12 +179,13 @@ def cancel_action(parameters):
 
 
 def select_file_paths(window, default_file_paths):
+    set_paths = partial(set_file_paths, default_file_paths)
     btn_updates = {
         'Back': dict(disabled = True),
         'Next': dict(disabled = False,
-                     button_text = 'Next')
+                     text = 'Next')
         }
-    btn_actions = {'Next': set_file_paths,
+    btn_actions = {'Next': set_paths,
                    'Cancel': cancel_action}
     file_paths = next_action(window, btn_updates, btn_actions)
     return file_paths
@@ -214,19 +215,34 @@ def get_file_paths(window, default_file_paths):
 
 def make_window(**file_paths):
     file_frame_list = file_selection_frame(**file_paths)
-    actions_list = [[sg.Submit(), sg.Cancel()]]
+    actions_list = set_action_buttons()
+    patient_text = [[sg.Text(key='PatientText',size=(30,3))]]
+    selector_set = [
+        [sg.Combo([], key='PatientSelector', size=(30,1),
+                  enable_events=True, disabled=True)],
+        [sg.Combo([], key='PlanSelector', size=(30,1),
+                  enable_events=True, disabled=True)],
+        [sg.Combo([], key='FieldSelector', size=(30,1),
+                  enable_events=True, disabled=True)]
+        ]
+    v_bar = sg.HorizontalSeparator(key='V_Bar')
     window = sg.Window('Electron Cutout Check', finalize=True, resizable=True,
                        layout=[
+        [sg.Column(patient_text, key='Patient Info'),
+         v_bar,
+         sg.Column(selector_set, key='Selectors')],
         [sg.Column(file_frame_list, key='File Selection')],
         [sg.Column(actions_list, key='Actions')]
         ])
     for elm in window.element_list():
         elm.expand(expand_x=True)
+    window['V_Bar'].expand(expand_y=True)
+        #TODO don't expand button elements
         # TODO Add display Patient info
         # TODO add field selector to GUI
     return window
 
-def select_field(block_coords: pd.DataFrame) -> Tuple[str]:
+def select_field(window, plan_df, block_coords: pd.DataFrame) -> Tuple[str]:
     """Select field for Aperture from list of available fields.
 
     Currently selects first field.  The aperture coordinates in the Selected
@@ -238,13 +254,61 @@ def select_field(block_coords: pd.DataFrame) -> Tuple[str]:
         selected_field (Tuple[str]): The PlanId and FieldId of the selected
             field as a tuple.
     """
+    def update_patient(window, patient):
+        template_rows = [
+            '{nm:<16s}{pt_nm:<16s}',
+            '{id:<16s}{pt_id:<16s}',
+            '{bd:<16s}{pt_bd:<16s}'
+            ]
+        pt_template = '\n'.join(template_rows)
+        pt_dict = dict(nm='Name',
+                       pt_nm='James Bond',
+                       id='ID',
+                       pt_id='007',
+                       bd='Birth Date',
+                       pt_bd='Jan 1 1955')
+        pt_text = pt_template.format(**pt_dict)
+        window['PatientText'].update(value=pt_text)
+        window.refresh()
+
+    patient_text = [[sg.Text(key='PatientText',size=(30,3))]]
+    selector_set = [
+        [sg.Combo([], key='PatientSelector', size=(30,1),
+                  enable_events=True, disabled=True)],
+        [sg.Combo([], key='PlanSelector', size=(30,1),
+                  enable_events=False, disabled=True)],
+        [sg.Combo([], key='FieldSelector', size=(30,1),
+                  enable_events=False, disabled=True)]
+        ]
+
     field_list = block_coords.columns.to_frame(index=True)
+    field_list = field_list.droplevel('Axis')
+    field_list.drop(columns='Axis', inplace=True)
+    field_list.drop_duplicates(inplace=True)
+    patient_info = plan_df.T[['PatientId','PatientName', 'PatientBirthDate']]
+    field_list = pd.concat([field_list, patient_info], axis='columns')
+
     patients = list(set(field_list['PatientReference']))
-    selected_patient = patients[0]
-    plans = list(set(field_list.loc[selected_patient,'PlanId']))
-    selected_plan = plans[0]
-    fields = list(set(field_list.loc[(selected_patient, selected_plan), 'FieldId']))
-    selected_field = fields[0]
+    window['PatientSelector'].update(values=patients, value=patients[0])
+
+    #plans = list(set(field_list.loc[selected_patient,'PlanId']))
+    plans = list(set(field_list['PlanId']))
+    window['PlanSelector'].update(values=plans, value=plans[0])
+    #fields = list(set(field_list.loc[(selected_patient, selected_plan), 'FieldId']))
+    fields = list(set(field_list['FieldId']))
+    window['FieldSelector'].update(values=fields, value=fields[0])
+    update_patient(window, patients)
+    window.refresh()
+
+    ## Test loop
+    done=False
+    while not(done):
+        event, parameters = window.read(timeout=200)
+        #if event == sg.TIMEOUT_KEY:
+        #    continue
+        #if event in 'Cancel':
+        #    done = True
+    window.close()
     return (selected_patient, selected_plan, selected_field)
 
 #%% Main
@@ -272,7 +336,7 @@ def main():
         save_data_file = output_path / output_file_name
         )
     window = make_window(**default_file_paths)
-    selected_file_paths = get_file_paths(window, default_file_paths)
+    selected_file_paths = select_file_paths(window, default_file_paths)
 
     #if selected_file_paths:
 
@@ -283,7 +347,7 @@ def main():
 
 
     #### SElect plan and field
-    selected_field = select_field(block_coords)
+    selected_field = select_field(window, plan_df, block_coords)
     ###
 
     insert_size = plan_df.at['ApplicatorOpening', selected_field]
