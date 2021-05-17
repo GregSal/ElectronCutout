@@ -13,7 +13,36 @@ import PySimpleGUI as sg
 import pandas as pd
 from load_dicom_e_plan import get_plan_data
 from load_dicom_e_plan import get_block_coord
-from Cutout_Analysis import analyze_cutout
+from Cutout_Analysis import show_cutout_info, add_block_info, save_data
+
+
+#%% File Selection
+def set_file_paths(default_file_paths, parameters):
+    file_paths = dict()
+    if parameters:
+        for path_name, default_path in default_file_paths.items():
+            selected_path = parameters.get(path_name, default_path)
+            file_paths[path_name] = Path(selected_path)
+    return file_paths
+
+
+#%% Field Selection
+def load_dicom_plans(selected_file_paths):
+    dicom_folder = selected_file_paths['dicom_folder']
+    plan_df = get_plan_data(dicom_folder)
+    block_coords = get_block_coord(plan_df)
+    field_options = build_field_options(plan_df, block_coords)
+    return block_coords, plan_df, field_options
+
+
+def build_field_options(plan_df, block_coords):
+    field_options = block_coords.columns.to_frame(index=True)
+    field_options = field_options.droplevel('Axis')
+    field_options.drop(columns='Axis', inplace=True)
+    field_options.drop_duplicates(inplace=True)
+    patient_info = plan_df.T[['PatientId','PatientName', 'PatientBirthDate']]
+    field_options = pd.concat([field_options, patient_info], axis='columns')
+    return field_options
 
 
 #%% Build GUI
@@ -57,11 +86,11 @@ def make_window(**file_paths):
                       enable_events=True, disabled=True)]
             ]
         v_bar = sg.HorizontalSeparator(key='V_Bar')
-        field_selection_frame = [
+        field_selection_frame = [[
             sg.Column(patient_text, key='Patient Info'),
              v_bar,
              sg.Column(selector_set, key='Selectors')
-             ]
+             ]]
         return field_selection_frame
 
     def file_selection_frame(**default_file_paths):
@@ -130,7 +159,6 @@ def make_window(**file_paths):
                 )
             return file_selector_frame
 
-        path_list = list(default_file_paths.keys())
         file_selection_list = make_file_selection_list(**default_file_paths)
         file_frame_list = [[file_selector(**selection)]
                            for selection in file_selection_list]
@@ -154,81 +182,82 @@ def make_window(**file_paths):
 
 
 #%% GUI Methods
-# TODO Perhaps have 1 main method that responds to Next, Back, Cancel, Finish
-# Use status element to indicate where in workflow
-def next_action(window, btn_updates, btn_actions):
-    for btn, updates in btn_updates.items():
-        window[btn].update(**updates)
-    done = False
-    while not(done):
-        event, parameters = window.read(timeout=200)
-        if event == sg.TIMEOUT_KEY:
-            continue
-        if event in btn_actions:
-            action_method = btn_actions[event]
-            action_results = action_method(parameters)
-            done = True
-    #window.close()
-    return action_results
-
-
 def cancel_action(*args, **kwargs):
     sg.popup_error('Cutout Analysis Canceled')
     return None
 
-#%% File Selection
-def set_file_paths(default_file_paths, parameters, event):
-    path_list = list(default_file_paths.keys())
-    file_paths = dict()
-    if parameters:
-        for path_name, default_path in default_file_paths.items():
-            selected_path = parameters.get(path_name, default_path)
-            file_paths[path_name] = Path(selected_path)
-    return file_paths
+
+def update_widgets(window, elm_updates):
+    for btn, updates in elm_updates.items():
+        window[btn].update(**updates)
 
 
-def select_file_paths(window, default_file_paths):
-    set_paths = partial(set_file_paths, default_file_paths)
-    btn_updates = {
-        'Back': dict(disabled = True),
-        'Next': dict(disabled = False,
-                     text = 'Next')
+def update_field_selection(window, selection_options, selector=None, selection=None):
+    def update_selection(selection_options, source_col, selector, default):
+        selection_list = list(set(selection_options[source_col]))
+        window[selector].update(values=selection_list,
+                                value=default,
+                                disabled=False)
+
+    def update_patient(window, selection_options, default):
+        template_rows = ['{PatientName:<16s}',
+                            '{PatientId:<16s}',
+                            '{PatientBirthDate:<16s}']
+        pt_template = '\n'.join(template_rows)
+        pt_text = pt_template.format(**default)
+        window['PatientText'].update(value=pt_text)
+        window.refresh()
+
+    source_index = {
+        'PatientSelector': 'PatientReference',
+        'PlanSelector': 'PlanId',
+        'FieldSelector': 'FieldId'
         }
-    btn_actions = {'Next': set_paths,
-                   'Cancel': cancel_action}
-    file_paths = next_action(window, btn_updates, btn_actions)
-    return file_paths
+    if selection:
+        selection_options = selection_options.xs(
+            selection, level=source_index[selector])
+    else:
+        # # This is intended to initialize the patients selector but not
+        # update it with a reduced list based on other selections.
+        # This keeps all patients available for selection.
+        first_field = selection_options.iloc[0].to_dict()
+        default_patient = first_field['PatientReference']
+        update_selection(selection_options, 'PatientReference', 'PatientSelector', default_patient)
+
+    first_field = selection_options.iloc[0].to_dict()
+    update_selection(selection_options, 'PlanId', 'PlanSelector', first_field['PlanId'])
+    update_selection(selection_options, 'FieldId', 'FieldSelector', first_field['FieldId'])
+    update_patient(window, selection_options, first_field)
+    window.refresh()
+    return selection_options
 
 
-def build_field_options(plan_df, block_coords):
-    field_options = block_coords.columns.to_frame(index=True)
-    field_options = field_options.droplevel('Axis')
-    field_options.drop(columns='Axis', inplace=True)
-    field_options.drop_duplicates(inplace=True)
-    patient_info = plan_df.T[['PatientId','PatientName', 'PatientBirthDate']]
-    field_options = pd.concat([field_options, patient_info], axis='columns')
-    return field_options
+def main_actions(window, default_file_paths):
+    """Contour Analysis steps:
 
+    1) Select DICOM folder
+        Read all DICOM Plan files in the folder
+    2) Select the field for Aperture from list of available fields.
+        Choose from Patient -> Plan -> Field
+        Resetting Patient resets Plan and Field Options
+        Defaults to first field found.
+    3) Select Cutout Image
+        Must be JPEG format
+    4) Set Report File Name
+        Must be .xlsx type
+        Will overwrite existing file
+    5) Generate Analysis Report
 
-def load_dicom_plans(selected_file_paths):
-    dicom_folder = selected_file_paths['dicom_folder']
-    plan_df = get_plan_data(dicom_folder)
-    block_coords = get_block_coord(plan_df)
-    field_options = build_field_options(plan_df, block_coords)
-    return block_coords, plan_df, field_options
+    window = make_window(**default_file_paths)
+    selected_file_paths = select_file_paths(window, default_file_paths)
+    # TODO Start with simple linear flow with disabled Back
+    # Perhaps have 1 main method that responds to Next, Back, Cancel, Finish
+    # Use status element to indicate where in work flow
+    #if selected_file_paths:
 
-#%% Field Selection
-def select_field(window, field_options) -> Tuple[str]:
-    """Select field for Aperture from list of available fields.
+    block_coords, plan_df, field_options = load_dicom_plans(selected_file_paths)
+    selected_field = test_select_field(window, field_options)
 
-    Currently selects first field.  The aperture coordinates in the Selected
-        field are used for the cutout dimensions.
-    After selecting patient build restricted plan and field list from original list
-    After selecting plan, build restricted patient and field list starting with current patient list
-    After selecting field, build restricted patient and plan list starting with current patient and plan list
-    After building new patient list populate patient text and default patient from first in list
-    After building new plan list populate default plan from first in list
-    After building new field list populate default field from first in list
     Args:
         block_coords (pd.DataFrame): Table with all fields containing
             apertures Column levels expected are: ['PlanId', 'FieldId', 'Axis'].
@@ -236,70 +265,109 @@ def select_field(window, field_options) -> Tuple[str]:
         selected_field (Tuple[str]): The PlanId and FieldId of the selected
             field as a tuple.
     """
-    def update_field_selection(window, selection_options, selection=None, selector=None):
-        def update_selection(selection_options, source_col, selector):
-            selection_list = list(set(selection_options[source_col]))
-            window[selector].update(values=selection_list,
-                                    value=selection_list[0],
-                                    disabled=False)
-            return selection_list
+    #%% 1) Select DICOM folder
+    dcm_fldr_updates = {
+        #'dicom_folder_frame': dict(visible = True),
+        'dicom_folder': dict(disabled = False),
+        #'image_file_frame': dict(visible = True),
+        'image_file': dict(disabled = False),
+        #'template_path_frame': dict(visible = True),
+        'template_path': dict(disabled = True),
+        #'save_data_file_frame': dict(visible = True),
+        'save_data_file': dict(disabled = False),
+        'PatientSelector': dict(disabled=True, values=[], value=''),
+        'PlanSelector': dict(disabled=True, values=[], value=''),
+        'FieldSelector': dict(disabled=True, values=[], value=''),
+        'Back': dict(disabled = True),
+        'Next': dict(disabled = False, text = 'Next')
+        }
+    update_widgets(window, dcm_fldr_updates)
+    done = False
+    while not(done):
+        event, parameters = window.read(timeout=200)
+        if event == sg.TIMEOUT_KEY:
+            continue
+        if event in 'Next':
+            selected_file_paths = set_file_paths(default_file_paths, parameters)
+            done = True
+        elif event in 'Cancel':
+            cancel_action()
+            selected_file_paths = None
+            done = True
+    if not selected_file_paths:
+        return None
 
-        def update_patient(window, selection_options):
-            template_rows = ['{PatientName:<16s}',
-                                '{PatientId:<16s}',
-                                '{PatientBirthDate:<16s}']
-            pt_template = '\n'.join(template_rows)
+    ########################
+    #%% Load DICOM Plans
+    block_coords, plan_df, field_options = load_dicom_plans(selected_file_paths)
 
-            first_field = selection_options.iloc[0].to_dict()
-            pt_text = pt_template.format(**first_field)
-            window['PatientText'].update(value=pt_text)
-            window.refresh()
 
-        source_index = {
-            'PatientSelector': 'PatientReference',
-            'PlanSelector': 'PlanId',
-            'FieldSelector': 'FieldId'
-            }
-        if selection:
-            selection_options = selection_options.xs(selection,
-                                                     level=source_index[selector])
-        else:
-            # Always keep all patients available for selection
-            update_selection(selection_options, 'PatientReference', 'PatientSelector')
-        update_selection(selection_options, 'PlanId', 'PlanSelector')
-        update_selection(selection_options, 'FieldId', 'FieldSelector')
-        update_patient(window, selection_options)
-        window.refresh()
-        return selection_options
+    #%% 2) Select the field for Aperture from list of available fields.
+    #    Choose from Patient -> Plan -> Field
+    #    Resetting Patient resets Plan and Field Options
+    #    Defaults to first field found.
+    # Currently selects first field.  The aperture coordinates in the Selected
+    #     field are used for the cutout dimensions.
+    # After selecting patient build restricted plan and field list from original list
+    # After selecting plan, build restricted patient and field list starting with current patient list
+    # After selecting field, build restricted patient and plan list starting with current patient and plan list
+    # After building new patient list populate patient text and default patient from first in list
+    # After building new plan list populate default plan from first in list
+    # After building new field list populate default field from first in list
 
     update_field_selection(window, field_options)
-
-    set_patient = partial(update_field_selection, window, 'PatientSelector', field_options)
-    set_plan = partial(update_field_selection, window, 'PlanSelector', selection_options)
-    btn_updates = {
-        'Back': dict(disabled = True),
-        'Next': dict(disabled = False,
-                     text = 'Next')
+    fld_updates = {
+        'dicom_folder_frame': dict(visible = False),
+        'dicom_folder': dict(disabled = True),
+        'Back': dict(disabled = False),
+        'Next': dict(disabled = False, text = 'Next')
         }
+    update_widgets(window, fld_updates)
     done=False
-    full_selection = None
+    parameters = None
+    selected_field = None
     selection_options = field_options
     while not(done):
         event, parameters = window.read(timeout=200)
+        if event == sg.TIMEOUT_KEY:
+            continue
         if event in ['PatientSelector', 'PlanSelector', 'FieldSelector']:
             selection = parameters[event]
             if event in 'PatientSelector':
                 selection_options = field_options  # Reset selections
-            selection_options = update_field_selection(window, event, selection_options,
-                                           selection)
+            selection_options = update_field_selection(
+                window, selection_options,
+                selector=event, selection=parameters[event])
         elif event in 'Cancel':
             done = True
         elif event in 'Next':
-            full_selection = (parameters['PatientSelector'],
+            selected_field = (parameters['PatientSelector'],
                               parameters['PlanSelector'],
                               parameters['FieldSelector'])
             done = True
-    return full_selection
+    if not selected_field:
+        return None
+
+    #%% 4) Set Report File Name
+    selected_file_paths = set_file_paths(default_file_paths, parameters)
+    save_data_file= selected_file_paths['save_data_file']
+    template_path= selected_file_paths['template_path']
+
+    #%% Save Cutout Info
+    insert_size = plan_df.at['ApplicatorOpening', selected_field]
+    workbook = save_data(block_coords, plan_df, save_data_file, template_path)
+    add_block_info(plan_df, block_coords, selected_field, workbook)
+
+
+    #%% 3) Select Cutout Image
+    selected_file_paths = set_file_paths(default_file_paths, parameters)
+    image_file = selected_file_paths['image_file']
+
+    #%% 5) Generate Analysis Report
+    show_cutout_info(image_file, insert_size, workbook)
+    return None
+
+
 ################################################################
 #%% Main
 
@@ -328,27 +396,8 @@ def main():
         save_data_file = output_path / output_file_name
         )
     window = make_window(**default_file_paths)
-    selected_file_paths = select_file_paths(window, default_file_paths)
-
-    #if selected_file_paths:
-
-    block_coords, plan_df, field_options = load_dicom_plans(selected_file_paths)
-    selected_field = test_select_field(window, field_options)
-
-
-    #### SElect plan and field
-    selected_field = select_field(window, plan_df, block_coords)
-    ###
-
-    insert_size = plan_df.at['ApplicatorOpening', selected_field]
-
-    ## In Cutout Analysis
-        #    analyze_cutout(**selected_file_paths)
-    workbook = save_data(block_coords, plan_df, save_data_file, template_path)
-    add_block_info(plan_df, block_coords, selected_field, workbook)
-    show_cutout_info(image_file, insert_size, workbook)
-
-
+    main_actions(window, default_file_paths)
+    window.close()
 
 
 if __name__ == '__main__':

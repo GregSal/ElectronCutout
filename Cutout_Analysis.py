@@ -482,7 +482,8 @@ def main():
     # dicom_folder = data_path / 'DICOM'
     # template_dir = Path(r'\\dkphysicspv1\e$\Gregs_Work\Plan Checking\Plan Check Tools\Templates')
     # template_dir = Path.cwd() / 'Electron Insert QA'
-
+    # FIXME Set correct default paths
+    # TODO Text for existence of selected files
     # Test directory is current directory
     data_path = Path.cwd()
     dicom_folder = Path.cwd()
@@ -492,12 +493,11 @@ def main():
     template_file_name = 'CutOut Size Check.xlsx'
     image_file_name = 'image2021-04-16-111118-1.jpg'
     selected_file_paths = dict(
-        dicom_starting_path = dicom_folder,
-        image_file_starting_path = data_path / image_file_name,
-        template_file_path = template_dir / template_file_name,
-        save_data_file_name = data_path / output_file_name
+        dicom_folder = dicom_folder,
+        image_file = data_path / image_file_name,
+        template_path = template_dir / template_file_name,
+        save_data_file = data_path / output_file_name
         )
-
     analyze_cutout(**selected_file_paths)
 
 

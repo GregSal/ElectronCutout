@@ -5,6 +5,7 @@ Created on Wed Feb 10 21:24:34 2021
 @author: Greg
 """
 #%% Imports
+import re
 from pathlib import Path
 from typing import Dict, List, Any
 import numpy as np
@@ -386,7 +387,7 @@ def main():
     # TODO turn this into Unit Tests
     dicom_folder = Path.cwd()
     output_file_name = 'Electron Plan DICOM Info.xlsx'
-    save_file = folder / output_file_name
+    save_file = dicom_folder / output_file_name
     # Load DICOM Data
     plan_df = get_plan_data(dicom_folder)
     block_coords = get_block_coord(plan_df)
