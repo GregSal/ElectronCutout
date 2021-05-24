@@ -11,7 +11,7 @@
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <InterpreterId>CondaEnv|CondaEnv|Standard</InterpreterId>
+    <InterpreterId>CondaEnv|CondaEnv|ElectronCutout</InterpreterId>
     <IsWindowsApplication>True</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
@@ -22,6 +22,8 @@
   <ItemGroup>
     <Content Include=".gitattributes" />
     <Content Include=".gitignore" />
+    <Content Include="ElectronCutout_spec.txt" />
+    <Content Include="LICENSE" />
     <Content Include="Output\CutOut Size Check 2.xlsx" />
     <Content Include="Output\CutOut Size Check Test 1.xlsx" />
     <Content Include="Output\CutOut Size Check Test.xlsx" />
@@ -32,6 +34,7 @@
     <Content Include="Reference Data\ElectronCutout Process Flow.pptx" />
     <Content Include="Reference Data\PDD Analysis.xlsx" />
     <Content Include="Reference Data\RDF Data.xlsx" />
+    <Content Include="requirements.txt" />
     <Content Include="Template Files\CutOut Size Check.xlsx" />
     <Content Include="Test Files\13 cm circle scan.jpg" />
     <Content Include="Test Files\Cutout scan.jpg" />
@@ -55,6 +58,7 @@
     <Compile Include="load_dicom_e_plan.py" />
   </ItemGroup>
   <ItemGroup>
+    <InterpreterReference Include="CondaEnv|CondaEnv|ElectronCutout" />
     <InterpreterReference Include="CondaEnv|CondaEnv|Standard" />
   </ItemGroup>
   <ItemGroup>

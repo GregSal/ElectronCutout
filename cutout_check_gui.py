@@ -352,7 +352,8 @@ def main_actions(window, default_file_paths):
 
     #%% Save Cutout Info
     insert_size = plan_df.at['ApplicatorOpening', selected_field]
-    workbook = save_data(plan_df, save_data_file, template_path)
+    selected_field_df = plan_df.loc[:, selected_field[0]]
+    workbook = save_data(selected_field_df, save_data_file, template_path)
     add_block_info(plan_df, block_coords, selected_field, workbook)
 
 
@@ -367,9 +368,7 @@ def main_actions(window, default_file_paths):
 
 ################################################################
 #%% Main
-# FIXME Saving all plan data rather than just selected data
-# FIXME  CutOut Coordinates has extra 0s
-# FIXME CutOut Parameters fields not lining up
+# FIXME CutOut Parameters Cutout Extent not correct
 
 def main():
     # Directory Paths

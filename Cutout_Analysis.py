@@ -133,6 +133,7 @@ def add_block_info(plan_df, block_coords: pd.DataFrame,
             coords (pd.DataFrame): The x,y coordinates for the aperture.
         """
         coords = block_coords.loc[:, selected_field]
+        coords.dropna(inplace=True)
         coords_sheet = workbook.sheets['CutOut Coordinates']
         coords_sheet.range('A3').options(pd.DataFrame, header=False,
                                          index=False).value = coords
