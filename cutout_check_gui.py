@@ -6,8 +6,6 @@ Created on Sun Apr 25 11:51:36 2021
 """
 #%% Imports etc.
 from pathlib import Path
-from functools import partial
-from typing import Tuple, List
 
 import PySimpleGUI as sg
 import pandas as pd
@@ -199,12 +197,12 @@ def update_field_selection(window, selection_options, selector=None, selection=N
                                 value=default,
                                 disabled=False)
 
-    def update_patient(window, selection_options, default):
+    def update_patient(window, reference):
         template_rows = ['{PatientName:<16s}',
                             '{PatientId:<16s}',
                             '{PatientBirthDate:<16s}']
         pt_template = '\n'.join(template_rows)
-        pt_text = pt_template.format(**default)
+        pt_text = pt_template.format(**reference)
         window['PatientText'].update(value=pt_text)
         window.refresh()
 
@@ -227,7 +225,7 @@ def update_field_selection(window, selection_options, selector=None, selection=N
     first_field = selection_options.iloc[0].to_dict()
     update_selection(selection_options, 'PlanId', 'PlanSelector', first_field['PlanId'])
     update_selection(selection_options, 'FieldId', 'FieldSelector', first_field['FieldId'])
-    update_patient(window, selection_options, first_field)
+    update_patient(window, first_field)
     window.refresh()
     return selection_options
 
@@ -332,7 +330,6 @@ def main_actions(window, default_file_paths):
         if event == sg.TIMEOUT_KEY:
             continue
         if event in ['PatientSelector', 'PlanSelector', 'FieldSelector']:
-            selection = parameters[event]
             if event in 'PatientSelector':
                 selection_options = field_options  # Reset selections
             selection_options = update_field_selection(
@@ -355,7 +352,7 @@ def main_actions(window, default_file_paths):
 
     #%% Save Cutout Info
     insert_size = plan_df.at['ApplicatorOpening', selected_field]
-    workbook = save_data(block_coords, plan_df, save_data_file, template_path)
+    workbook = save_data(plan_df, save_data_file, template_path)
     add_block_info(plan_df, block_coords, selected_field, workbook)
 
 
@@ -370,7 +367,9 @@ def main_actions(window, default_file_paths):
 
 ################################################################
 #%% Main
-
+# FIXME Saving all plan data rather than just selected data
+# FIXME  CutOut Coordinates has extra 0s
+# FIXME CutOut Parameters fields not lining up
 
 def main():
     # Directory Paths

@@ -44,12 +44,11 @@ def select_field(block_coords: pd.DataFrame) -> Tuple[str]:
     return selected_field
 
 
-def save_data(block_coords: pd.DataFrame, plan_df: pd.DataFrame,
+def save_data(plan_df: pd.DataFrame,
               save_file: Path, template_path: Path) -> xw.Book:
     """Load the template spreadsheet and save a copy containing plan data.
 
     Args:
-        block_coords (pd.DataFrame): The x, y coordinates of the aperture.
         plan_df (pd.DataFrame): Plan Parameters obtained from the DICOM File.
         save_file (Path): Path to use for saving the filled template.
         template_path (Path): Path to the Excel template.
@@ -471,7 +470,7 @@ def analyze_cutout(dicom_folder=Path.cwd(),
     block_coords = get_block_coord(plan_df)
     selected_field = select_field(block_coords)
     insert_size = plan_df.at['ApplicatorOpening', selected_field]
-    workbook = save_data(block_coords, plan_df, save_data_file, template_path)
+    workbook = save_data(plan_df, save_data_file, template_path)
     add_block_info(plan_df, block_coords, selected_field, workbook)
     show_cutout_info(image_file, insert_size, workbook)
 
