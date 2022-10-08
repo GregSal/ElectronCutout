@@ -369,6 +369,7 @@ def main_actions(window, default_file_paths):
 ################################################################
 #%% Main
 # FIXME CutOut Parameters Cutout Extent not correct
+# FIXME Plan and Field Selection display on CutOut Image is not correct (Taking 1st field not selected field)
 
 def main():
     # Directory Paths

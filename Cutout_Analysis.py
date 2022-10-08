@@ -465,9 +465,9 @@ def analyze_cutout(dicom_folder=Path.cwd(),
                    template_path='CutOut Size Check.xlsx',
                    save_data_file='CutOut Size Check Test.xlsx',
                    image_file='Cutout scan.jpg'):
-    plan_files = [file for file in dicom_folder.glob('**/RP*.dcm')]
+    #plan_files = [file for file in dicom_folder.glob('**/RP*.dcm')]
 
-    plan_df = get_plan_data(plan_files)
+    plan_df = get_plan_data(dicom_folder)
     block_coords = get_block_coord(plan_df)
     selected_field = select_field(block_coords)
     insert_size = plan_df.at['ApplicatorOpening', selected_field]

@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{664785fd-9087-40fe-a311-1ceeb0bd5226}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>cutout_check_gui.py</StartupFile>
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId>Global|ContinuumAnalytics|Anaconda38-64</InterpreterId>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="ElectronCutout_spec.txt" />
+    <Content Include="requirements.txt" />
+    <Content Include="Test Files\13 cm circle scan.jpg" />
+    <Content Include="Test Files\Cutout scan.jpg" />
+    <Content Include="Test Files\CutoutTest2.jpg" />
+    <Content Include="Test Files\CutoutTest3.jpg" />
+    <Content Include="Test Files\CutoutTest4.jpg" />
+    <Content Include="Test Files\cutout_low_res.jpg" />
+    <Content Include="Test Files\image2021-04-15-070027-1.jpg" />
+    <Content Include="Test Files\image2021-04-16-111118-1.jpg" />
+    <Content Include="Test Files\image2021-04-21-134525-1.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Cutout_Analysis.py" />
+    <Compile Include="cutout_check_gui.py" />
+    <Compile Include="load_dicom_e_plan.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Test Files" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="CondaEnv|CondaEnv|PlanCheckingTools" />
+    <InterpreterReference Include="CondaEnv|CondaEnv|VarianStandard" />
+    <InterpreterReference Include="Global|ContinuumAnalytics|Anaconda38-64" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>

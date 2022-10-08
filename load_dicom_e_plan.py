@@ -7,7 +7,7 @@ Created on Wed Feb 10 21:24:34 2021
 #%% Imports
 import re
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, List, Any
 import numpy as np
 import pandas as pd
 import xlwings as xw
